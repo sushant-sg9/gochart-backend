@@ -5,7 +5,6 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
-import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 
 import routes from './routes/index.js';
@@ -24,11 +23,6 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
   credentials: process.env.CORS_CREDENTIALS === 'true'
 }));
-
-// Logging
-if (process.env.NODE_ENV !== 'production') {
-  app.use(morgan('dev'));
-}
 
 // Body parsers
 app.use(express.json({ limit: '1mb' }));
