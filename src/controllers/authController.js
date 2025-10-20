@@ -26,11 +26,15 @@ export const sendRegistrationOTP = async (req, res, next) => {
     let tempUser = await User.findOne({ email, isEmailVerified: false });
     
     if (!tempUser) {
+      // Generate unique temporary values to avoid duplicate key errors
+      const tempPhone = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempPassword = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       tempUser = new User({
         name,
         email,
-        phone: 'temp', // Will be updated during actual registration
-        password: 'temp', // Will be updated during actual registration
+        phone: tempPhone, // Unique temp phone
+        password: tempPassword, // Unique temp password
         isActive: false, // Mark as inactive until full registration
         isEmailVerified: false
       });
