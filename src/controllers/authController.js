@@ -3,7 +3,7 @@ import jwtHelper from '../utils/jwt.js';
 import logger from '../utils/logger.js';
 import emailService from '../services/emailService.js';
 import sessionService from '../services/sessionService.js';
-import connectDB from '../config/database.js';
+import {connectDB} from '../config/database.js';
 import { 
   AuthenticationError, 
   ValidationError, 
