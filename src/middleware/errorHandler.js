@@ -34,7 +34,28 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg.match(/(["'])(?:(?=(\\?))\2.)*?\1/)[0];
+  let value = 'duplicate value';
+  
+  // Handle different error message formats
+  const errorMessage = err.errmsg || err.message || '';
+  
+  if (errorMessage) {
+    const match = errorMessage.match(/(["'])(?:(?=(\\?))\2.)*?\1/);
+    if (match && match[0]) {
+      value = match[0];
+    } else {
+      // Try to extract field name from keyValue or keyPattern
+      if (err.keyValue) {
+        const field = Object.keys(err.keyValue)[0];
+        const val = err.keyValue[field];
+        value = `${field}: ${val}`;
+      } else if (err.keyPattern) {
+        const field = Object.keys(err.keyPattern)[0];
+        value = field;
+      }
+    }
+  }
+  
   const message = `Duplicate field value: ${value}. Please use another value!`;
   return new AppError(message, 400);
 };
