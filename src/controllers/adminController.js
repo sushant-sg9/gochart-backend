@@ -632,3 +632,41 @@ export const deletePaymentInfo = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Delete all user sessions
+ */
+export const deleteUserSessions = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    // Verify user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Terminate all active sessions for the user
+    const result = await Session.terminateUserSessions(userId);
+
+    logger.info(`All sessions deleted for user: ${user.email} by admin: ${req.user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'All user sessions deleted successfully',
+      data: {
+        userId,
+        userEmail: user.email,
+        sessionsTerminated: result.modifiedCount,
+        deletedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};

@@ -391,7 +391,7 @@ export const login = async (req, res, next) => {
     // Ensure database connection for serverless
     await connectDB();
     
-    const { email, password, forceLogin = false } = req.body;
+    const { email, password } = req.body;
     const ipAddress = req.ip;
     const userAgent = req.get('User-Agent');
 
@@ -429,32 +429,28 @@ export const login = async (req, res, next) => {
     // Reset login attempts on successful login
     await user.resetLoginAttempts();
 
-    // Check session limits if not force login
-    if (!forceLogin) {
-      const validationResult = await sessionService.validateLoginAttempt(
-        user._id, 
-        email, 
-        ipAddress, 
-        userAgent
-      );
+    // Check session limits
+    const validationResult = await sessionService.validateLoginAttempt(
+      user._id, 
+      email, 
+      ipAddress, 
+      userAgent
+    );
 
-      if (!validationResult.canLogin) {
-        return res.status(409).json({
-          success: false,
-          message: validationResult.message,
-          code: 'SESSION_LIMIT_EXCEEDED',
-          data: {
-            maxSessions: 2,
-            activeSessions: validationResult.activeSessions
-          }
-        });
-      }
+    if (!validationResult.canLogin) {
+      return res.status(409).json({
+        success: false,
+        message: 'You are already signed in on 2 devices. Please contact our support team to clear your sessions or sign out from other devices.',
+        code: 'SESSION_LIMIT_EXCEEDED',
+        data: {
+          maxSessions: 2,
+          activeSessions: validationResult.activeSessions
+        }
+      });
     }
 
-    // Create or update session
-    const session = forceLogin ? 
-      await sessionService.forceLogin(user._id, email, ipAddress, userAgent) :
-      await sessionService.createSession(user._id, email, ipAddress, userAgent);
+    // Create session
+    const session = await sessionService.createSession(user._id, email, ipAddress, userAgent);
 
     // Update user login info
     user.lastLogin = new Date();
@@ -824,97 +820,3 @@ export const terminateAllOtherSessions = async (req, res, next) => {
   }
 };
 
-/**
- * Force login by terminating oldest session
- */
-export const forceLogin = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const ipAddress = req.ip;
-    const userAgent = req.get('User-Agent');
-
-    // Find user with password field
-    const user = await User.findOne({ email }).select('+password');
-
-    // Check if user exists and account is not locked
-    if (!user) {
-      throw new AuthenticationError('Invalid email or password');
-    }
-
-    if (!user.isActive) {
-      throw new AuthenticationError('Account has been deactivated');
-    }
-
-    if (!user.isEmailVerified) {
-      throw new AuthenticationError('Please verify your email before logging in. Check your inbox for verification link.');
-    }
-
-    if (user.isLocked) {
-      throw new AuthenticationError(
-        `Account is locked until ${user.lockUntil.toLocaleString()}`
-      );
-    }
-
-    // Check password
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      // Increment login attempts
-      await user.incLoginAttempts();
-      throw new AuthenticationError('Invalid email or password');
-    }
-
-    // Reset login attempts on successful login
-    await user.resetLoginAttempts();
-
-    // Force login (terminate oldest session)
-    const session = await sessionService.forceLogin(user._id, email, ipAddress, userAgent);
-
-    // Update user login info
-    user.lastLogin = new Date();
-    user.lastActivity = new Date();
-    user.ipAddress = ipAddress;
-    user.userAgent = userAgent;
-    await user.save({ validateBeforeSave: false });
-
-    // Generate JWT token with session ID
-    const token = jwtHelper.generateToken({
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      sessionId: session.sessionId
-    });
-
-    // Set cookie
-    const cookieOptions = {
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    };
-
-    res.cookie('access_token', token, cookieOptions);
-
-    // Remove password from response
-    user.password = undefined;
-
-    logger.info(`User force logged in: ${email} (Session: ${session.sessionId})`);
-
-    res.status(200).json({
-      success: true,
-      message: 'Force login successful. Previous session has been terminated.',
-      data: {
-        user,
-        token,
-        session: {
-          sessionId: session.sessionId,
-          expiresAt: session.expiresAt,
-          deviceInfo: session.deviceInfo
-        }
-      }
-    });
-
-  } catch (error) {
-    next(error);
-  }
-};

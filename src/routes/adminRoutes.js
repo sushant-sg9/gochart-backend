@@ -91,6 +91,13 @@ router.post('/userstatus', authenticate, authorize('admin'), validate(userStatus
  */
 router.post('/change-sub-months', authenticate, authorize('admin'), validate(changeSubMonthsSchema), adminController.changeSubMonths);
 
+/**
+ * @route   DELETE /api/v1/admin/delete-user-sessions
+ * @desc    Delete all sessions for a specific user
+ * @access  Private (Admin)
+ */
+router.delete('/delete-user-sessions', authenticate, authorize('admin'), adminController.deleteUserSessions);
+
 // ============= PAYMENT PLAN MANAGEMENT =============
 
 /**
