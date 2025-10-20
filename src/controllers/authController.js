@@ -497,6 +497,12 @@ export const login = async (req, res, next) => {
     });
 
   } catch (error) {
+    logger.error('Login error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
     next(error);
   }
 };
