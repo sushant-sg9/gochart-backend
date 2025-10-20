@@ -11,9 +11,6 @@ import {
   NotFoundError 
 } from '../utils/errors.js';
 
-/**
- * Send OTP for registration verification
- */
 export const sendRegistrationOTP = async (req, res, next) => {
   try {
     const { name, email } = req.body;
