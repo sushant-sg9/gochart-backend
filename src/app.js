@@ -18,32 +18,11 @@ app.set('trust proxy', 1);
 // Security headers
 app.use(helmet());
 
-// CORS - More permissive for debugging
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:5174'
-    ];
-    
-    console.log('Request origin:', origin);
-    console.log('Allowed origins:', allowedOrigins);
-    
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    }
-    
-    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-    return callback(new Error(msg), false);
-  },
+// CORS
+app.use(cors({
+  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
   credentials: process.env.CORS_CREDENTIALS === 'true'
-};
-
-app.use(cors(corsOptions));
+}));
 
 // Body parsers
 app.use(express.json({ limit: '1mb' }));
@@ -66,14 +45,6 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Environment logging for debugging (remove in production)
-console.log('Environment:', {
-  NODE_ENV: process.env.NODE_ENV,
-  CORS_ORIGIN: process.env.CORS_ORIGIN,
-  CORS_CREDENTIALS: process.env.CORS_CREDENTIALS,
-  MONGODB_URI: process.env.MONGODB_URI ? 'SET' : 'NOT SET',
-  JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET'
-});
 
 // Routes
 app.get('/', (req, res) => {
@@ -90,6 +61,24 @@ app.get('/health', (req, res) => {
       cors: process.env.CORS_ORIGIN
     }
   });
+});
+
+app.post('/api/v1/test', (req, res) => {
+  try {
+    console.log('Test endpoint hit with:', req.body);
+    res.status(200).json({ 
+      success: true, 
+      message: 'Test endpoint working', 
+      data: req.body
+    });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Test failed', 
+      error: error.message
+    });
+  }
 });
 app.use(`/api/${process.env.API_VERSION || 'v1'}`, routes);
 

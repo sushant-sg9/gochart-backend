@@ -12,11 +12,18 @@ const sendErrorProd = (err, res) => {
   } else {
     // Programming or other unknown error: don't leak error details
     logger.error('Unexpected Error:', err);
+    console.error('Full error details:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      code: err.code
+    });
 
     res.status(500).json({
       success: false,
       message: 'Something went wrong!',
       data: null,
+      ...(process.env.NODE_ENV === 'development' && { debug: err.message })
     });
   }
 };
