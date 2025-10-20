@@ -49,7 +49,22 @@ export const sendRegistrationOTP = async (req, res, next) => {
       await emailService.sendVerificationOTP(email, name, verificationOTP);
       logger.info(`Registration OTP sent to: ${email}`);
     } catch (emailError) {
-      logger.error(`Failed to send registration OTP to ${email}:`, emailError);
+      logger.error(`Failed to send registration OTP to ${email}:`, {
+        message: emailError.message,
+        code: emailError.code,
+        response: emailError.response,
+        stack: emailError.stack
+      });
+      
+      console.error('Detailed email error:', {
+        message: emailError.message,
+        code: emailError.code,
+        response: emailError.response,
+        smtp_user: process.env.SMTP_USER ? 'SET' : 'NOT_SET',
+        smtp_pass: process.env.SMTP_PASS ? 'SET' : 'NOT_SET',
+        smtp_host: process.env.SMTP_HOST || 'NOT_SET'
+      });
+      
       throw new Error('Failed to send verification OTP. Please try again later.');
     }
 
