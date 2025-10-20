@@ -12,10 +12,18 @@ const PORT = process.env.PORT || 5001;
       console.log(`🚀 Server running on port ${PORT} (env: ${process.env.NODE_ENV})`);
     });
 
-    // Connect to database (blocking - will exit if fails)
-    await connectDB();
-    // Start cron jobs only after DB connection
-    cronJobs.start();
+    // Connect to database
+    try {
+      await connectDB();
+      // Start cron jobs only after DB connection
+      cronJobs.start();
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      // Don't exit in production (Vercel doesn't like process.exit)
+      if (process.env.NODE_ENV !== 'production') {
+        process.exit(1);
+      }
+    }
 
     // Graceful shutdown
     process.on('SIGTERM', () => {

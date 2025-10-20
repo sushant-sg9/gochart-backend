@@ -3,6 +3,7 @@ import jwtHelper from '../utils/jwt.js';
 import logger from '../utils/logger.js';
 import emailService from '../services/emailService.js';
 import sessionService from '../services/sessionService.js';
+import connectDB from '../config/database.js';
 import { 
   AuthenticationError, 
   ValidationError, 
@@ -387,6 +388,9 @@ export const verifyOTPAndResetPassword = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
+    // Ensure database connection for serverless
+    await connectDB();
+    
     const { email, password, forceLogin = false } = req.body;
     const ipAddress = req.ip;
     const userAgent = req.get('User-Agent');
