@@ -9,29 +9,45 @@ class EmailService {
 
   initializeTransporter() {
     try {
+      const port = parseInt(process.env.SMTP_PORT) || 587;
+      const isSecure = port === 465; // SSL on 465, STARTTLS on 587
+
       this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: false, // true for 465, false for other ports
+        port,
+        secure: isSecure,
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS
         },
         tls: {
+          // Allow self-signed/managed certs if provider uses them
           rejectUnauthorized: false
-        }
+        },
+        // Enable verbose SMTP logs outside production to aid debugging on hosts like Render
+        logger: process.env.NODE_ENV !== 'production',
+        debug: process.env.NODE_ENV !== 'production'
       });
 
-      // Verify connection configuration
-      this.transporter.verify((error, success) => {
+      // Verify connection configuration at startup to surface credential/port issues
+      this.transporter.verify((error) => {
         if (error) {
-          logger.error('SMTP configuration error:', error);
+          logger.error('SMTP configuration error', {
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            host: process.env.SMTP_HOST,
+            port,
+            secure: isSecure,
+            userSet: !!process.env.SMTP_USER,
+            passSet: !!process.env.SMTP_PASS
+          });
         } else {
-          logger.info('SMTP server is ready to take our messages');
+          logger.info('SMTP server is ready to take messages');
         }
       });
     } catch (error) {
-      logger.error('Failed to initialize email transporter:', error);
+      logger.error('Failed to initialize email transporter', { message: error.message, stack: error.stack });
     }
   }
 

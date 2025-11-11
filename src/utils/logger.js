@@ -1,10 +1,2 @@
-const noop = () => {};
-
-const logger = {
-  info: noop,
-  error: noop,
-  warn: noop,
-  debug: noop,
-};
-
-export default logger;
+// Temporary logger piping to console so errors surface in Render logs
+export default console;
