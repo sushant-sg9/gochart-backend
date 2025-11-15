@@ -1,10 +1,15 @@
 import nodemailer from 'nodemailer';
+import https from 'https';
 import logger from '../utils/logger.js';
 
 class EmailService {
   constructor() {
+    this.provider = process.env.EMAIL_PROVIDER || 'smtp'; // 'smtp' or 'resend'
     this.transporter = null;
-    this.initializeTransporter();
+
+    if (this.provider === 'smtp') {
+      this.initializeTransporter();
+    }
   }
 
   initializeTransporter() {
@@ -54,6 +59,10 @@ class EmailService {
 
   async sendEmail(to, subject, html, text = null) {
     try {
+      if (this.provider === 'resend') {
+        return await this.sendWithResend(to, subject, html, text);
+      }
+
       if (!this.transporter) {
         throw new Error('Email transporter not initialized');
       }
@@ -73,6 +82,70 @@ class EmailService {
       logger.error(`Failed to send email to ${to}:`, error);
       throw error;
     }
+  }
+
+  async sendWithResend(to, subject, html, text = null) {
+    const apiKey = process.env.RESEND_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not configured');
+    }
+
+    const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.FROM_EMAIL || process.env.SMTP_USER;
+    const fromName = process.env.RESEND_FROM_NAME || process.env.FROM_NAME || 'GoChart';
+
+    const payload = JSON.stringify({
+      from: `${fromName} <${fromEmail}>`,
+      to: [to],
+      subject,
+      html,
+      text: text || this.htmlToText(html)
+    });
+
+    const options = {
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        Authorization: `Bearer ${apiKey}`
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsed = data ? JSON.parse(data) : {};
+              logger.info(`Email sent successfully to ${to} via Resend`, { id: parsed.id });
+              resolve(parsed);
+            } catch (parseError) {
+              logger.info(`Email sent successfully to ${to} via Resend (unparsed response)`);
+              resolve({});
+            }
+          } else {
+            logger.error('Resend API error', { statusCode: res.statusCode, body: data });
+            reject(new Error(`Resend API error: ${res.statusCode}`));
+          }
+        });
+      });
+
+      req.on('error', (err) => {
+        logger.error('Resend API request failed', { message: err.message });
+        reject(err);
+      });
+
+      req.write(payload);
+      req.end();
+    });
   }
 
   htmlToText(html) {
