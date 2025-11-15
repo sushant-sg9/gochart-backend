@@ -24,9 +24,10 @@ class EmailService {
           // Allow self-signed/managed certs if provider uses them
           rejectUnauthorized: false
         },
-        // Enable verbose SMTP logs outside production to aid debugging on hosts like Render
-        logger: process.env.NODE_ENV !== 'production',
-        debug: process.env.NODE_ENV !== 'production'
+        // Disable Nodemailer SMTP console logging (handshake, raw message, etc.)
+        // to avoid noisy SMTP debug output in application logs.
+        logger: false,
+        debug: false
       });
 
       // Verify connection configuration at startup to surface credential/port issues
