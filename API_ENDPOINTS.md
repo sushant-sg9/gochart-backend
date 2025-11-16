@@ -71,6 +71,17 @@ All API responses follow the consistent format:
 - **Body**: `{ utrNo, Months, price, type, paymentPlanId? }`
 - **Response**: `{ success: true, message: "Payment request submitted successfully", data: { utrNo, subscriptionMonths, paymentType, paymentAmount, paymentPlanId, status } }`
 
+### GET `/api/v1/user/chart-history`
+|- **Description**: Get last 5 chart history entries for current user
+|- **Access**: Private (Bearer Token)
+|- **Response**: `{ success: true, message: "Chart history retrieved successfully", data: [{ symbol, title, path, openedAt }] }`
+
+### POST `/api/v1/user/chart-history`
+|- **Description**: Add or update a chart history entry for current user
+|- **Access**: Private (Bearer Token)
+|- **Body**: `{ symbol: string, title: string, path: string }`
+|- **Response**: `{ success: true, message: "Chart history updated successfully", data: [{ symbol, title, path, openedAt }] }`
+
 ### GET `/api/v1/user/all`
 - **Description**: Get all users (admin only)
 - **Access**: Private (Admin)

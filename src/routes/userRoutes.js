@@ -20,6 +20,20 @@ router.get('/', authenticate, userController.getUser);
 router.post('/payment', authenticate, validate(userPaymentSchema), userController.payment);
 
 /**
+ * @route   GET /api/v1/user/chart-history
+ * @desc    Get last 5 chart history entries for the current user
+ * @access  Private
+ */
+router.get('/chart-history', authenticate, userController.getChartHistory);
+
+/**
+ * @route   POST /api/v1/user/chart-history
+ * @desc    Add or update a chart history entry for the current user
+ * @access  Private
+ */
+router.post('/chart-history', authenticate, userController.addChartHistoryEntry);
+
+/**
  * @route   GET /api/v1/user/all
  * @desc    Get all users (admin only)
  * @access  Private (Admin)

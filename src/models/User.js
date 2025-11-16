@@ -77,7 +77,16 @@ const userSchema = new Schema({
   paymentPlanId: { 
     type: String, 
     default: null 
-  }
+  },
+  // Per-user recent chart history (max 5 entries, managed by controller)
+  recentCharts: [
+    {
+      symbol: { type: String, required: true, trim: true },
+      title: { type: String, required: true, trim: true },
+      path: { type: String, required: true, trim: true },
+      openedAt: { type: Date, default: Date.now },
+    },
+  ],
 }, {
   timestamps: true
 });

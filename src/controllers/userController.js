@@ -245,3 +245,86 @@ export const payment = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get last 5 chart history entries for current user
+ */
+export const getChartHistory = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+        data: null,
+      });
+    }
+
+    const user = await User.findById(req.user._id).select('recentCharts');
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const history = (user.recentCharts || []).slice(0, 5);
+
+    res.status(200).json({
+      success: true,
+      message: 'Chart history retrieved successfully',
+      data: history,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Add or update a chart history entry for current user
+ */
+export const addChartHistoryEntry = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+        data: null,
+      });
+    }
+
+    const { symbol, title, path } = req.body;
+
+    if (!symbol || !title || !path) {
+      throw new ValidationError('symbol, title and path are required');
+    }
+
+    const user = await User.findById(req.user._id).select('recentCharts');
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const existing = Array.isArray(user.recentCharts) ? user.recentCharts : [];
+
+    // Remove any existing entry for this path or symbol
+    const filtered = existing.filter((entry) => entry.path !== path && entry.symbol !== symbol);
+
+    const newEntry = {
+      symbol,
+      title,
+      path,
+      openedAt: new Date(),
+    };
+
+    const updated = [newEntry, ...filtered].slice(0, 5);
+
+    user.recentCharts = updated;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'Chart history updated successfully',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
