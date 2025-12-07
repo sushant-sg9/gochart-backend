@@ -1,83 +1,13 @@
-import nodemailer from 'nodemailer';
 import https from 'https';
 import logger from '../utils/logger.js';
 
 class EmailService {
-  constructor() {
-    this.provider = process.env.EMAIL_PROVIDER || 'smtp'; // 'smtp' or 'resend'
-    this.transporter = null;
-
-    if (this.provider === 'smtp') {
-      this.initializeTransporter();
-    }
-  }
-
-  initializeTransporter() {
-    try {
-      const port = parseInt(process.env.SMTP_PORT) || 587;
-      const isSecure = port === 465; // SSL on 465, STARTTLS on 587
-
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port,
-        secure: isSecure,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        },
-        tls: {
-          // Allow self-signed/managed certs if provider uses them
-          rejectUnauthorized: false
-        },
-        // Disable Nodemailer SMTP console logging (handshake, raw message, etc.)
-        // to avoid noisy SMTP debug output in application logs.
-        logger: false,
-        debug: false
-      });
-
-      // Verify connection configuration at startup to surface credential/port issues
-      this.transporter.verify((error) => {
-        if (error) {
-          logger.error('SMTP configuration error', {
-            message: error.message,
-            code: error.code,
-            command: error.command,
-            host: process.env.SMTP_HOST,
-            port,
-            secure: isSecure,
-            userSet: !!process.env.SMTP_USER,
-            passSet: !!process.env.SMTP_PASS
-          });
-        } else {
-          logger.info('SMTP server is ready to take messages');
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to initialize email transporter', { message: error.message, stack: error.stack });
-    }
-  }
+  constructor() {}
 
   async sendEmail(to, subject, html, text = null) {
     try {
-      if (this.provider === 'resend') {
-        return await this.sendWithResend(to, subject, html, text);
-      }
-
-      if (!this.transporter) {
-        throw new Error('Email transporter not initialized');
-      }
-
-      const mailOptions = {
-        from: `${process.env.FROM_NAME || 'GoChart'} <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
-        to,
-        subject,
-        html,
-        text: text || this.htmlToText(html)
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      logger.info(`Email sent successfully to ${to}: ${result.messageId}`);
-      return result;
+      // Always use Resend as the email provider
+      return await this.sendWithResend(to, subject, html, text);
     } catch (error) {
       logger.error(`Failed to send email to ${to}:`, error);
       throw error;

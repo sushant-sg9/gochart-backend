@@ -15,16 +15,22 @@ export const sendRegistrationOTP = async (req, res, next) => {
   try {
     const { name, email } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Look for any user with this email
+    let existingUser = await User.findOne({ email });
 
-    if (existingUser) {
+    // If user exists and is already fully registered, block registration
+    if (existingUser && existingUser.isEmailVerified && existingUser.isActive) {
       throw new ConflictError('Email is already registered');
     }
 
-    // Create a temporary user record with OTP (not fully registered)
-    let tempUser = await User.findOne({ email, isEmailVerified: false });
-    
+    // If user exists but is NOT verified/active, reuse it as temporary user
+    // so the user can resend OTP without getting "email already registered"
+    let tempUser =
+      existingUser && (!existingUser.isEmailVerified || !existingUser.isActive)
+        ? existingUser
+        : null;
+
+    // Otherwise create a new temporary user record with OTP (not fully registered)
     if (!tempUser) {
       // Generate unique temporary values to avoid duplicate key errors
       const tempPhone = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -59,10 +65,7 @@ export const sendRegistrationOTP = async (req, res, next) => {
       console.error('Detailed email error:', {
         message: emailError.message,
         code: emailError.code,
-        response: emailError.response,
-        smtp_user: process.env.SMTP_USER ? 'SET' : 'NOT_SET',
-        smtp_pass: process.env.SMTP_PASS ? 'SET' : 'NOT_SET',
-        smtp_host: process.env.SMTP_HOST || 'NOT_SET'
+        response: emailError.response
       });
       
       throw new Error('Failed to send verification OTP. Please try again later.');
