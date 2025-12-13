@@ -4,6 +4,9 @@ import logger from '../utils/logger.js';
 class CronJobService {
   constructor() {
     this.baseUrl = process.env.BASE_URL || 'http://localhost:5001';
+    // Python Quotex EURUSD candles endpoint. You can override this via QUOTEX_CANDLES_URL env.
+    this.quotexCandlesUrl = 'https://quotex-chart-python.onrender.com/api/eurusd/candles'
+    //http://127.0.0.1:5000/api/eurusd/candles;
   }
 
   /**
@@ -12,6 +15,7 @@ class CronJobService {
   start() {
     this.startPremiumStatusCheck();
     this.startSessionCleanup();
+    this.startQuotexKeepAlive();
     logger.info('🕐 Cron jobs started successfully');
   }
 
@@ -43,6 +47,36 @@ class CronJobService {
     });
 
     logger.info(`Premium status check cron job scheduled: ${cronPattern}`);
+  }
+
+  /**
+   * Quotex EURUSD candles keep-alive cron job
+   * Calls the Python Quotex API every 5 minutes
+   */
+  startQuotexKeepAlive() {
+    const cronPattern = process.env.QUOTEX_KEEPALIVE_CRON || '*/5 * * * *';
+
+    cron.schedule(cronPattern, async () => {
+      try {
+        logger.info(`[Quotex KeepAlive] Pinging ${this.quotexCandlesUrl} ...`);
+        const response = await fetch(this.quotexCandlesUrl);
+        const data = await response.json().catch(() => null);
+
+        if (response.ok) {
+          const count = Array.isArray(data?.data) ? data.data.length : 'unknown';
+          logger.info(`[Quotex KeepAlive] Success. Candles count: ${count}`);
+        } else {
+          logger.warn(`[Quotex KeepAlive] Non-OK response: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        logger.error('[Quotex KeepAlive] Error calling Quotex candles API:', error.message);
+      }
+    }, {
+      scheduled: true,
+      timezone: 'UTC'
+    });
+
+    logger.info(`Quotex keep-alive cron job scheduled: ${cronPattern}`);
   }
 
   /**
