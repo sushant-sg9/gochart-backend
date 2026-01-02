@@ -1,10 +1,5 @@
 import mongoose from 'mongoose';
 import User from './src/models/User.js';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
 const makeAdmin = async (email) => {
   try {
     // Connect to MongoDB
