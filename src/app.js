@@ -25,35 +25,30 @@ app.use(helmet());
 /* =========================
    CORS CONFIG (FIXED)
 ========================= */
-const allowedOrigins = (
-  process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : []
+const allowedOrigins = [
+  'http://sushantsg9.duckdns.org',
+  'https://sushantsg9.duckdns.org'
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.error('CORS blocked:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
 );
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow server-to-server / curl / health checks
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.error('CORS blocked:', origin);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Set-Cookie'],
-};
-
-/* ✅ CORS MUST COME BEFORE ROUTES */
-app.use(cors(corsOptions));
-
-/* ✅ REQUIRED FOR PREFLIGHT */
-app.options('*', cors(corsOptions));
+app.options('*', cors());
 
 /* =========================
    BODY & COOKIE PARSERS
@@ -106,20 +101,6 @@ app.get('/health', (req, res) => {
    API ROUTES
 ========================= */
 app.use(`/api/${process.env.API_VERSION || 'v1'}`, routes);
-
-/* =========================
-   CORS ERROR HANDLER
-========================= */
-app.use((err, req, res, next) => {
-  if (err?.message === 'Not allowed by CORS') {
-    return res.status(403).json({
-      success: false,
-      message: 'CORS policy violation',
-      origin: req.headers.origin,
-    });
-  }
-  next(err);
-});
 
 /* =========================
    GLOBAL ERROR HANDLER
