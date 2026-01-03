@@ -5,7 +5,7 @@ class CronJobService {
   constructor() {
     this.baseUrl = process.env.BASE_URL || 'http://localhost:5001';
     // Python Quotex EURUSD candles endpoint. You can override this via QUOTEX_CANDLES_URL env.
-    this.quotexCandlesUrl = 'https://quotex-chart-python.onrender.com/api/eurusd/candles'
+    this.quotexCandlesUrl = 'http://pythonsushantsg9.duckdns.org/api/eurusd/candles'
     //http://127.0.0.1:5000/api/eurusd/candles;
   }
 
