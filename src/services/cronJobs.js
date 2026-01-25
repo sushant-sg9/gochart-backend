@@ -3,9 +3,9 @@ import logger from '../utils/logger.js';
 
 class CronJobService {
   constructor() {
-    this.baseUrl = process.env.BASE_URL || 'http://localhost:5001';
+    this.baseUrl = 'https://api.gochart.in';
     // Python Quotex EURUSD candles endpoint. You can override this via QUOTEX_CANDLES_URL env.
-    this.quotexCandlesUrl = 'http://pythonsushantsg9.duckdns.org/api/eurusd/candles'
+    this.quotexCandlesUrl = 'https://python.gochart.in/api/eurusd/candles'
     //http://127.0.0.1:5000/api/eurusd/candles;
   }
 
