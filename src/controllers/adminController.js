@@ -286,51 +286,88 @@ export const getOnlineUsers = async (req, res, next) => {
 /**
  * Get all users (admin dashboard)
  */
-export const getAllUsers = async (req, res, next) => {
-  try {
-    const { page = 1, limit = 10, search = '', status = '' } = req.query;
-    
-    const query = {};
-    
-    // Add search filter
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    // Add status filter
-    if (status) {
-      query.status = status;
-    }
-    
-    const users = await User.find(query)
-      .select('-password')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
-    
-    const total = await User.countDocuments(query);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Users retrieved successfully',
-      data: {
-        users,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(total / limit),
-          totalUsers: total
+  export const getAllUsers = async (req, res, next) => {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        search = '',
+        status = '',
+        paymentType = '',
+        isPremium = '',
+        startDate = '',
+        endDate = ''
+      } = req.query;
+
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+
+      const query = {};
+
+      // Search
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { utrNo: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // Status
+      if (status) {
+        query.status = status;
+      }
+
+      // Payment Type
+      if (paymentType) {
+        query.paymentType = paymentType;
+      }
+
+      // Premium
+      if (isPremium !== '') {
+        query.isPremium = isPremium === 'true';
+      }
+
+      // Date Range
+      if (startDate || endDate) {
+        query.premiumStartDate = {};
+
+        if (startDate) {
+          query.premiumStartDate.$gte = new Date(startDate);
+        }
+
+        if (endDate) {
+          query.premiumStartDate.$lte = new Date(endDate);
         }
       }
-    });
 
-  } catch (error) {
-    next(error);
-  }
-};
+      const users = await User.find(query)
+        .select('-password')
+        .sort({ createdAt: -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum);
+
+      const total = await User.countDocuments(query);
+
+      res.status(200).json({
+        success: true,
+        message: 'Users retrieved successfully',
+        data: {
+          users,
+          pagination: {
+            currentPage: pageNum,
+            totalPages: Math.ceil(total / limitNum),
+            totalUsers: total
+          }
+        }
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  };
+
 
 /**
  * Update user status (approve/decline payment)
